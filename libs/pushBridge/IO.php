@@ -46,10 +46,10 @@ class pushBridge_IO
      * @param  pushBridge_Adapter instance
      * @return void
      */
-    public function __construct(pushBridge_Adapter_AdapterInterface $adapter, $serializer = null){
+    public function __construct(pushBridge_Adapter_AdapterInterface $adapter, $serializer = null, $serializerOption = Array()){
 		
 		$this->_adapter = $adapter;
-		$this->setSerializer( $serializer );
+		$this->setSerializer( $serializer, $serializerOption );
 		$this->connect();		
 	}
 	
@@ -59,26 +59,31 @@ class pushBridge_IO
      * @param  mixed Zend_Serializer instance or null to use default
      * @return void
      */
-	public function setSerializer($serializer = null){
+	public function setSerializer($serializer = null, $option = Array()){
 	
 		if ($serializer instanceof Zend_Serializer)	
 			$this->_serializer = $serializer;
 		else
 		{
+			if (empty($serializer))
+				$this->_defaultSerializer = 'json';
+			else
+				$this->_defaultSerializer = (string)$serializer;			
+			
 			if (class_exists('Zend_Serializer'))
 			{
 				if ($this->_defaultSerializer === 'json')
-					$this->_serializer = Zend_Serializer::factory('Json', Array());
+					$this->_serializer = Zend_Serializer::factory('Json', $option);
 				else
 				if ($this->_defaultSerializer === 'php')
-					$this->_serializer = Zend_Serializer::factory('PhpSerialize', Array());
+					$this->_serializer = Zend_Serializer::factory('PhpSerialize', $option);
 				else
 				if ($this->_defaultSerializer === 'pickle')
-					$this->_serializer = Zend_Serializer::factory('PythonPickle');
+					$this->_serializer = Zend_Serializer::factory('PythonPickle', $option);
 			}
 			else
 				throw new Exception('Class serializer not found (need: Zend_Serializer)');
-		}			
+		}
 	}
 
     /**
@@ -132,7 +137,7 @@ class pushBridge_IO
 			$_data = (string)$data;
 		else
 			$_data = $this->_serializer->serialize( $data );
-		
+			
 		if (!empty($_data))
 			return $this->_adapter->send($_data, $to, $config);
 		else
