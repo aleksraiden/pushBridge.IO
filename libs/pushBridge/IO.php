@@ -34,18 +34,51 @@ class pushBridge_IO
      /**
      * @var resource
      */
-    protected $_socket = null;
+    protected $_adapter = null;	
+	protected $_config = null;
+	protected $_serializer = null;
+	
+	private $_defaultSerializer = 'json';
 	
 	/**
      * Constructor
      *
-     * @param  array|Zend_Config $options
+     * @param  pushBridge_Adapter instance
      * @return void
      */
-    public function __construct(pushBridge_Adapter $adapter){
+    public function __construct(pushBridge_Adapter $adapter, $serializer = null){
+		
+		$this->_adapter = $adapter;
+		$this->setSerializer( $serializer );
+		$this->connect();		
+	}
 	
+	/**
+     * Set serializer interface
+     *
+     * @param  mixed Zend_Serializer instance or null to use default
+     * @return void
+     */
+	public function setSerializer($serializer = null){
 	
-	
+		if ($serializer instanceof Zend_Serializer)	
+			$this->_serializer = $serializer;
+		else
+		{
+			if (class_exists('Zend_Serializer'))
+			{
+				if ($this->_defaultSerializer === 'json')
+					$this->_serializer = Zend_Serializer::factory('Json', Array());
+				else
+				if ($this->_defaultSerializer === 'php')
+					$this->_serializer = Zend_Serializer::factory('PhpSerialize', Array());
+				else
+				if ($this->_defaultSerializer === 'pickle')
+					$this->_serializer = Zend_Serializer::factory('PythonPickle');
+			}
+			else
+				throw new Exception('Class serializer not found (need: Zend_Serializer)');
+		}			
 	}
 
     /**
@@ -54,8 +87,8 @@ class pushBridge_IO
      * @return resource
      */
     public function getConnection(){
-	
-	
+		if ($this->_adapter instanceOf  pushBridge_Adapter)
+			return $this->_adapter->getConnection();	
 	}
 
     /**
@@ -63,8 +96,8 @@ class pushBridge_IO
 	 * @return boolean
      */
     public function connect(){
-	
-	
+		if ($this->_adapter instanceOf  pushBridge_Adapter)
+			return $this->_adapter->connect();
 	}
 
     /**
@@ -73,8 +106,10 @@ class pushBridge_IO
      * @return boolean
      */
     public function close(){
-	
-	
+		if ($this->_adapter instanceOf  pushBridge_Adapter)
+			return $this->_adapter->close();
+			
+		return true;
 	}
 	
 	
@@ -83,9 +118,19 @@ class pushBridge_IO
      *
      * @return boolean
      */
-    public function send($data = null, $config = Array()){
-	
-	
+    public function send($data = null, $to = Array(), $config = Array('noSerialize' => true)){
+		$_data = ''; 
+		
+		//serializing data
+		if (((array_key_exists('noSerialize', $config)) && ($config['noSerialize'] === true)) || (!( $this->_defaultSerializer instanceof Zend_Serializer )))
+			$_data = $data;
+		else		
+			$_data = $this->_serializer->serialize( $data );
+		
+		if (empty($_data))
+			return $this->_adapter->send($_data, $to, $config);
+		else
+			throw new Exception('Empty data value');
 	}	
 	
 }
