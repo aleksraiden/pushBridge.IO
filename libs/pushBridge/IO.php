@@ -46,7 +46,7 @@ class pushBridge_IO
      * @param  pushBridge_Adapter instance
      * @return void
      */
-    public function __construct(pushBridge_Adapter $adapter, $serializer = null){
+    public function __construct(pushBridge_Adapter_AdapterInterface $adapter, $serializer = null){
 		
 		$this->_adapter = $adapter;
 		$this->setSerializer( $serializer );
@@ -118,16 +118,22 @@ class pushBridge_IO
      *
      * @return boolean
      */
-    public function send($data = null, $to = Array(), $config = Array('noSerialize' => true)){
+    public function send($data = null, $to = Array(), $config = Array()){
 		$_data = ''; 
 		
 		//serializing data
-		if (((array_key_exists('noSerialize', $config)) && ($config['noSerialize'] === true)) || (!( $this->_defaultSerializer instanceof Zend_Serializer )))
-			$_data = $data;
-		else		
+		if ((!array_key_exists('serialize', $config)) || (empty($config['serialize'])))
+			$config['serialize'] = false;
+		
+		if (!( $this->_serializer instanceof Zend_Serializer_Adapter_AdapterAbstract ))
+			$config['serialize'] = false;
+		
+		if ($config['serialize'] === false)
+			$_data = (string)$data;
+		else
 			$_data = $this->_serializer->serialize( $data );
 		
-		if (empty($_data))
+		if (!empty($_data))
 			return $this->_adapter->send($_data, $to, $config);
 		else
 			throw new Exception('Empty data value');

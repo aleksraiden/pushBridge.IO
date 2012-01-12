@@ -23,7 +23,7 @@
  /**
  * @see Zend_Queue_Adapter_AdapterAbstract
  */
-require_once 'pushBridge/Adapter/AdapterAbstract.php';
+require_once 'pushBridge/Adapter/AdapterInterface.php';
  
 /**
  * Interface for common adapter operations
@@ -34,7 +34,7 @@ require_once 'pushBridge/Adapter/AdapterAbstract.php';
  * @copyright  Copyright (c) AGPsource.com 2007-2012
  * @license    http://agpsource.com/license/new-bsd     New BSD License
  */
-class pushBridge_Adapter_Partcl extends pushBridge_Adapter_AdapterInterface
+class pushBridge_Adapter_Partcl implements pushBridge_Adapter_AdapterInterface
 {
      /**
      * @var resource
@@ -50,16 +50,16 @@ class pushBridge_Adapter_Partcl extends pushBridge_Adapter_AdapterInterface
      * @return void
      */
     public function __construct($options = Array()){
-		//îáÿçàòåëüíûå publish_key êîòîğûé äëÿ óíèôèêàöèè ñåêğåò âñåğàâíî :) 
+		//Ğ¾Ğ±ÑĞ·Ğ°Ñ‚ĞµĞ»ÑŒĞ½Ñ‹Ğµ publish_key ĞºĞ¾Ñ‚Ğ¾Ñ€Ñ‹Ğ¹ Ğ´Ğ»Ñ ÑƒĞ½Ğ¸Ñ„Ğ¸ĞºĞ°Ñ†Ğ¸Ğ¸ ÑĞµĞºÑ€ĞµÑ‚ Ğ²ÑĞµÑ€Ğ°Ğ²Ğ½Ğ¾ :) 
 		if ((!array_key_exists('secretKey', $options)) || (empty($options['secretKey'])))
 			throw new Excepion('Empty secret key (also called publish key)');
 		else
 			$this->_secretKey = $options['secretKey'];
 		
-		if (!class_exists('Zend_Http'))
-			throw new Excepion('To obtain http connection we need Zend_Http');
+		if (!class_exists('Zend_Http_Client'))
+			throw new Excepion('To obtain http connection we need Zend_Http component');
 			
-		//òàêæå êàñòîìíûé êîíôèã - httpAdapterConfig 
+		//Ñ‚Ğ°ĞºĞ¶Ğµ ĞºĞ°ÑÑ‚Ğ¾Ğ¼Ğ½Ñ‹Ğ¹ ĞºĞ¾Ğ½Ñ„Ğ¸Ğ³ - httpAdapterConfig 
 		if ((!array_key_exists('httpAdapterConfig', $options)) || (empty($options['httpAdapterConfig'])))
 			$options['httpAdapterConfig'] = Array();	
 			
@@ -75,14 +75,27 @@ class pushBridge_Adapter_Partcl extends pushBridge_Adapter_AdapterInterface
 		else
 		if ( $options['httpAdapter'] == 'proxy' )
 			$_adapter = new Zend_Http_Client_Adapter_Proxy();
-
-		if ( $_adapter instanceof Zend_Http_Client_Adapter )		
+			
+		if ( $_adapter instanceof Zend_Http_Client_Adapter_Interface ) //cheking interface, not class 
 			$_adapter->setConfig( $options['httpAdapterConfig'] );
 		else
-			throw new Excepion('Error while obtain underline HTTP adapter');
-				
+			throw new Exception('Error while obtain underline HTTP adapter');
+			
+		if ((!array_key_exists('server', $options)) || (empty($options['server'])))
+			$options['server'] = 'production';
+		else
+		if ($options['server'] == 'dev')
+			$options['server'] = 'development';
 		
-		$this->_connection = new Zend_Http_Client('http://partcl.com', array(
+		$_uri = 'http://partcl.com';
+		
+		if ( $options['server'] == 'development' )
+			$_uri = 'http://dev.partcl.com';
+		elseif ( $options['server'] == 'production' )
+			$_uri = 'http://partcl.com';
+		
+		
+		$this->_connection = new Zend_Http_Client($_uri . '/publish', array(
 			'maxredirects' => 1,
 			'timeout'      => 30,			
 			'keepalive'    => true,
@@ -117,7 +130,7 @@ class pushBridge_Adapter_Partcl extends pushBridge_Adapter_AdapterInterface
 	 * @return boolean
      */
     public function send($data = '', $to = Array(), $config = Array()){
-		//to íå ìîæå áûòü ïóñòûì, ıòî òåã, êóäà ïàáëèøèì 	
+		//to Ğ½Ğµ Ğ¼Ğ¾Ğ¶Ğµ Ğ±Ñ‹Ñ‚ÑŒ Ğ¿ÑƒÑÑ‚Ñ‹Ğ¼, ÑÑ‚Ğ¾ Ñ‚ĞµĞ³, ĞºÑƒĞ´Ğ° Ğ¿Ğ°Ğ±Ğ»Ğ¸ÑˆĞ¸Ğ¼ 	
 		if (empty($data))
 			throw new Exception('Empty tag value');
 			
@@ -133,7 +146,6 @@ class pushBridge_Adapter_Partcl extends pushBridge_Adapter_AdapterInterface
 			
 		$this->getConnection()->setParameterGet('id', $_tag);
 		$this->getConnection()->setParameterGet('value', $data);
-
 		
 		$response = $this->getConnection()->request();
 		
@@ -141,7 +153,7 @@ class pushBridge_Adapter_Partcl extends pushBridge_Adapter_AdapterInterface
 			return false;
 		else
 		{
-			//!TODO: à ÷òî ñ ğåäèğåêòàìè äåëàòü? 
+			//!TODO: Ğ° Ñ‡Ñ‚Ğ¾ Ñ Ñ€ĞµĞ´Ğ¸Ñ€ĞµĞºÑ‚Ğ°Ğ¼Ğ¸ Ğ´ĞµĞ»Ğ°Ñ‚ÑŒ? 
 			if (($response->isSuccessful()) || ($response->isRedirect()))
 				return true;
 			else

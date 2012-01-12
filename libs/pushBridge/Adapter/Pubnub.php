@@ -23,7 +23,7 @@
  /**
  * @see Zend_Queue_Adapter_AdapterAbstract
  */
-require_once 'pushBridge/Adapter/AdapterAbstract.php';
+require_once 'pushBridge/Adapter/AdapterInterface.php';
  
 /**
  * Interface for common adapter operations
