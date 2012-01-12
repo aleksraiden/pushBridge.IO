@@ -32,3 +32,10 @@ Pusher.com:
 	$push = new pushBridge_IO( new pushBridge_Adapter_Pusher(Array('appId' => '<Your app Id>', 'authKey' => '<Your key>', 'secretKey' => '<Your secret key>', 'debug' => true)) );
 	$push->send('Hello world from pushBridge.IO', 'test_channel', Array('serialize' => false, 'event' => 'push_test'));
 	
+Pubnub.com:
+
+	$push = new pushBridge_IO( new pushBridge_Adapter_Pubnub(Array('readKey' => '<Your subscribe key>', 'authKey' => '<Your publish key>', 'secretKey' => '<Your secret key>')) );
+	$push->send('Hello world from pushBridge.IO', 'my_channel');
+	
+	
+

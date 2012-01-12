@@ -138,6 +138,9 @@ class pushBridge_IO
 		else
 			$_data = $this->_serializer->serialize( $data );
 			
+		//для разных случаев, передаем в конфиге еще и оригинальное сообщение, без сериализации 
+		$config['__raw__'] = $data;
+			
 		if (!empty($_data))
 			return $this->_adapter->send($_data, $to, $config);
 		else

@@ -54,7 +54,7 @@ class Pubnub {
     function publish($args) {
         ## Fail if bad input.
         if (!($args['channel'] && $args['message'])) {
-            echo('Missing Channel or Message');
+            //echo('Missing Channel or Message');
             return false;
         }
 
@@ -76,7 +76,7 @@ class Pubnub {
 
         ## Fail if message too long.
         if (strlen($message) > $this->LIMIT) {
-            echo('Message TOO LONG (' . $this->LIMIT . ' LIMIT)');
+            //echo('Message TOO LONG (' . $this->LIMIT . ' LIMIT)');
             return array( 0, 'Message Too Long.' );
         }
 
