@@ -37,5 +37,5 @@ Pubnub.com:
 	$push = new pushBridge_IO( new pushBridge_Adapter_Pubnub(Array('readKey' => '<Your subscribe key>', 'authKey' => '<Your publish key>', 'secretKey' => '<Your secret key>')) );
 	$push->send('Hello world from pushBridge.IO', 'my_channel');
 	
-	
+	!Json encoded message are limited to 1800 byte (why???)
 
