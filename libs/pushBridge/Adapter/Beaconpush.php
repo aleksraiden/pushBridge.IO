@@ -24,7 +24,6 @@
  * @see Zend_Queue_Adapter_AdapterAbstract
  */
 require_once 'pushBridge/Adapter/AdapterInterface.php';
-require_once 'pushBridge/Adapter/API/BeaconPush.php';
  
 /**
  * Interface for common adapter operations
