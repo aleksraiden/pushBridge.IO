@@ -52,4 +52,9 @@ x-Stream.ly:
 	$push->send('Hello world from pushBridge.IO', 'mychannel', Array('event' => 'my_event'));
 	
 	!Your need SSL (OpenSSL) to obtain connection
+	
+ioBridge.com:
+
+	$push = new pushBridge_IO( new pushBridge_Adapter_ioBridge(Array('authId' => '<Your widget ID>')) );
+	$push->send('Hello world from pushBridge.IO');
 
