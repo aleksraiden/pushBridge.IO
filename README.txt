@@ -47,4 +47,9 @@ BeaconPush.com:
 	//special feature from service: getting online users counter
 	$online_users = $push->getUsersOnline(); //int, count user or false if error
 	
+x-Stream.ly:
+	$push = new pushBridge_IO( new pushBridge_Adapter_xStreamly(Array('emailKey' => '<Your e-mail (account login)>', 'authKey' => '<Your App Key>', 'secretKey' => '<Your account password>')) );
+	$push->send('Hello world from pushBridge.IO', 'mychannel', Array('event' => 'my_event'));
+	
+	!Your need SSL (OpenSSL) to obtain connection
 

@@ -58,12 +58,22 @@ class pushBridge_Adapter_xStreamly implements pushBridge_Adapter_AdapterInterfac
 		if (!class_exists('Zend_Http_Client'))
 			throw new Excepion('To obtain http connection we need Zend_Http component');
 			
+		//нам обязателен SSL транспорт 
+		$_tr = stream_get_transports();
+		// ssl, sslv3, sslv2
+		if (!in_array('ssl', $_tr))
+			throw new Excepion('We neew SSL connection to communicate with x-Stream.ly server');	
+			
 		//не обязательный
 		if ((!array_key_exists('secretKey', $options)) || (empty($options['secretKey'])))
-			$options['secretKey'] = null;
+			throw new Excepion('Empty password');
+			
+		if ((!array_key_exists('emailKey', $options)) || (empty($options['emailKey'])))
+			throw new Excepion('Empty e-mail ');
 				
 		if ((!array_key_exists('authKey', $options)) || (empty($options['authKey'])))
 			throw new Excepion('Empty auth (API) key');
+				
 		
 		//также кастомный конфиг - httpAdapterConfig 
 		if ((!array_key_exists('httpAdapterConfig', $options)) || (empty($options['httpAdapterConfig'])))
@@ -72,11 +82,7 @@ class pushBridge_Adapter_xStreamly implements pushBridge_Adapter_AdapterInterfac
 		if ((!array_key_exists('httpAdapter', $options)) || (empty($options['httpAdapter'])))
 			$options['httpAdapter'] = 'socket';
 			
-		//можно указать другую версию API, по дефолту 1.0.0
-		if ((!array_key_exists('versionAPI', $options)) || (empty($options['versionAPI'])))
-			$options['versionAPI'] = '1.0.0';
-			
-		
+				
 		if ( $options['httpAdapter'] == 'socket' )
 			$_adapter = new Zend_Http_Client_Adapter_Socket(); 
 		else
@@ -91,19 +97,20 @@ class pushBridge_Adapter_xStreamly implements pushBridge_Adapter_AdapterInterfac
 		else
 			throw new Exception('Error while obtain underline HTTP adapter');
 
-		$this->_uri = 'http://api.beaconpush.com/'.$options['versionAPI'].'/'.$options['authKey'].'/channels';
+		$this->_uri = 'https://secure.x-stream.ly/api/v1.1';
 		$this->_connection = new Zend_Http_Client($this->_uri, array(
 			'maxredirects' => 1,
 			'timeout'      => 30,			
 			'keepalive'    => true,
 			'adapter'	   => $_adapter
+			//'ssltransport' => 'sslv2',
+            //'sslusecontext' => TRUE
 		));
 			
 		$this->_connection->setHeaders(array('X-Powered-By' => 'pushBridge.IO API'));
 		
-		if (!empty($options['secretKey']))
-			$this->_connection->setHeaders(array('X-Beacon-Secret-Key' => $options['secretKey']));
-
+		$this->_connection->setAuth($options['emailKey'], $options['secretKey'], Zend_Http_Client::AUTH_BASIC);
+		
 		$this->_config = $options;
 	}
 
@@ -126,11 +133,20 @@ class pushBridge_Adapter_xStreamly implements pushBridge_Adapter_AdapterInterfac
 		
 		if ((!array_key_exists('event', $config)) || (empty($config['event'])))
 			$config['event'] = 'my_event';
-	
-		$_data = Zend_Json::encode( array('name' => $config['event'], 'data' => $data) );
 		
-		$this->getConnection()->setRawData($_data);		
-		$this->getConnection()->setUri($this->_uri . '/' . $to);
+		if ((!array_key_exists('persisted', $config)) || (empty($config['persisted'])))
+			$config['persisted'] = false;
+	
+		$this->getConnection()->setRawData($data);	
+
+		if ( $config['persisted'] === true )
+			$_p = '?persisted=true';
+		else
+			$_p = '?persisted=false';
+
+
+		
+		$this->getConnection()->setUri($this->_uri . '/' . $this->_config['authKey'] . '/channels/' . $to . '/events/' . $config['event'] . $_p);
 		$this->_connection->setMethod(Zend_Http_Client::POST);
 		
 		$response = $this->getConnection()->request();
@@ -170,7 +186,7 @@ class pushBridge_Adapter_xStreamly implements pushBridge_Adapter_AdapterInterfac
 	 *  API specific to BeaconPush 
 	 *  return int|boolean count of online users at channel
 	 */
-	 public function getUsersOnline(){
+	 public function getSubscription(){
 		$this->_connection->setMethod(Zend_Http_Client::GET);
 		$this->getConnection()->setUri('http://api.beaconpush.com/'.$this->config['versionAPI'].'/'.$this->config['authKey'].'/users');
 		
