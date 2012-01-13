@@ -42,6 +42,7 @@ class pushBridge_Adapter_Beaconpush implements pushBridge_Adapter_AdapterInterfa
      */
     protected $_connection = null;
 	protected $_config = null;
+	protected $_uri = null;
 	
 	/**
      * Constructor
@@ -55,17 +56,55 @@ class pushBridge_Adapter_Beaconpush implements pushBridge_Adapter_AdapterInterfa
 		if ( ! extension_loaded( 'json' ) )
 			throw new Exception('There is missing dependant extensions - please ensure JSON modules are installed' );
 		
+		if (!class_exists('Zend_Http_Client'))
+			throw new Excepion('To obtain http connection we need Zend_Http component');
+			
 		//не обязательный
 		if ((!array_key_exists('secretKey', $options)) || (empty($options['secretKey'])))
-			$options['authKey'] = null;
+			$options['secretKey'] = null;
 				
 		if ((!array_key_exists('authKey', $options)) || (empty($options['authKey'])))
 			throw new Excepion('Empty auth (API) key');
-				
 		
-		//!TODO: переписать на свою реализацию через Zend_Http
-		$this->_connection = new BeaconPush(Array('api_key' => $options['authKey'], 'secret_key' => $options['secretKey']));
+		//также кастомный конфиг - httpAdapterConfig 
+		if ((!array_key_exists('httpAdapterConfig', $options)) || (empty($options['httpAdapterConfig'])))
+			$options['httpAdapterConfig'] = Array();	
+			
+		if ((!array_key_exists('httpAdapter', $options)) || (empty($options['httpAdapter'])))
+			$options['httpAdapter'] = 'socket';
+			
+		//можно указать другую версию API, по дефолту 1.0.0
+		if ((!array_key_exists('versionAPI', $options)) || (empty($options['versionAPI'])))
+			$options['versionAPI'] = '1.0.0';
+			
 		
+		if ( $options['httpAdapter'] == 'socket' )
+			$_adapter = new Zend_Http_Client_Adapter_Socket(); 
+		else
+		if ( $options['httpAdapter'] == 'curl' )
+			$_adapter = new Zend_Http_Client_Adapter_Curl(); 
+		else
+		if ( $options['httpAdapter'] == 'proxy' )
+			$_adapter = new Zend_Http_Client_Adapter_Proxy();
+			
+		if ( $_adapter instanceof Zend_Http_Client_Adapter_Interface ) //cheking interface, not class 
+			$_adapter->setConfig( $options['httpAdapterConfig'] );
+		else
+			throw new Exception('Error while obtain underline HTTP adapter');
+
+		$this->_uri = 'http://api.beaconpush.com/'.$options['versionAPI'].'/'.$options['authKey'].'/channels';
+		$this->_connection = new Zend_Http_Client($this->_uri, array(
+			'maxredirects' => 1,
+			'timeout'      => 30,			
+			'keepalive'    => true,
+			'adapter'	   => $_adapter
+		));
+			
+		$this->_connection->setHeaders(array('X-Powered-By' => 'pushBridge.IO API'));
+		
+		if (!empty($options['secretKey']))
+			$this->_connection->setHeaders(array('X-Beacon-Secret-Key' => $options['secretKey']));
+
 		$this->_config = $options;
 	}
 
@@ -82,46 +121,32 @@ class pushBridge_Adapter_Beaconpush implements pushBridge_Adapter_AdapterInterfa
      * Sending data to provider
 	 * @return boolean
      */
-    public function send($data = '', $to = Array('mychannel'), $config = Array('event' => 'my_event')){
+    public function send($data = '', $to = 'mychannel', $config = Array('event' => 'my_event')){
 		if (empty($data))
 			throw new Exception('Empty data value');
-		
-		if ((is_string($to)) && (!empty($to)))
-		{
-			$to = Array();
-			$to[] = $to;			
-		}
-		
-		if (is_array($to))
-		{
-			foreach($to as $x)
-			{
-				$this->getConnection()->add_channels($x);
-			}
-		}
 		
 		if ((!array_key_exists('event', $config)) || (empty($config['event'])))
 			$config['event'] = 'my_event';
 	
-		$_res = Array();
-		foreach($to as $_channel)
+		$_data = Zend_Json::encode( array('name' => $config['event'], 'data' => $data) );
+		
+		$this->getConnection()->setRawData($_data);		
+		$this->getConnection()->setUri($this->_uri . '/' . $to);
+		$this->_connection->setMethod(Zend_Http_Client::POST);
+		
+		$response = $this->getConnection()->request();
+		
+		if (!($response instanceof Zend_Http_Response))
+			return false;
+		else
 		{
-			$_res[] = $this->getConnection()->send_to_channel($_channel, $config['event'], $data);
-		}
-
-	
-		return $_res;
-
-	
-		if ((is_array($_res)) && (count($_res) > 1))
-		{
-			if ($_res[1] == 'S')
+			//!TODO: а что с редиректами делать? 
+			if (($response->isSuccessful()) || ($response->isRedirect()))
 				return true;
 			else
-				return false;
-		}
-		else
-			return false;		
+				if ($response->isError())
+					return false;		
+		}		
 	}
 
     /**
@@ -140,4 +165,30 @@ class pushBridge_Adapter_Beaconpush implements pushBridge_Adapter_AdapterInterfa
     public function close(){
 		return true;
 	}
+	
+	/**
+	 *	Get online users 
+	 *  API specific to BeaconPush 
+	 *  return int|boolean count of online users at channel
+	 */
+	 public function getUsersOnline(){
+		$this->_connection->setMethod(Zend_Http_Client::GET);
+		$this->getConnection()->setUri('http://api.beaconpush.com/'.$this->config['versionAPI'].'/'.$this->config['authKey'].'/users');
+		
+		$response = $this->getConnection()->request();
+		
+		if (!($response instanceof Zend_Http_Response))
+			return false;
+		else
+		{
+			//!TODO: а что с редиректами делать? 
+			if (($response->isSuccessful()) || ($response->isRedirect()))
+			{
+				$_resp = Zend_Json::decode( $response->getBody() );
+				return $_resp['online'];
+			}else
+				if ($response->isError())
+					return false;		
+		}	 
+	 }
 }

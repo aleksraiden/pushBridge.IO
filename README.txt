@@ -38,4 +38,13 @@ Pubnub.com:
 	$push->send('Hello world from pushBridge.IO', 'my_channel');
 	
 	!Json encoded message are limited to 1800 byte (why???)
+	
+BeaconPush.com: 
+
+	$push = new pushBridge_IO( new pushBridge_Adapter_Beaconpush(Array('authKey' => '<Your API Key>', 'secretKey' => '<Your secret key>')) );
+	$push->send('Hello world from pushBridge.IO', 'mychannel');
+
+	//special feature from service: getting online users counter
+	$online_users = $push->getUsersOnline(); //int, count user or false if error
+	
 
