@@ -93,7 +93,7 @@ class pushBridge_Adapter_Pusher implements pushBridge_Adapter_AdapterInterface
      * Sending data to provider
 	 * @return boolean
      */
-    public function send($data = '', $to = Array('test_channel'), $config = Array('event' => 'my_event', socket_id => null, 'debug' => false)){
+    public function send($data = '', $to = Array('test_channel'), $config = Array('event' => 'my_event', 'socket_id' => null, 'debug' => false)){
 		//для пушера надо channel, event и данные
 		// в $to у нас будет channel
 		if (empty($data))
