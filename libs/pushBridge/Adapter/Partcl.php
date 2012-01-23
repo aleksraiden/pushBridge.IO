@@ -145,11 +145,6 @@ class pushBridge_Adapter_Partcl implements pushBridge_Adapter_AdapterInterface
 			throw new Exception('Empty tag name');
 			
 		$this->getConnection()->setParameterGet('id', $_tag);
-		
-		//!TODO: фигня для Flash API 
-		$data = str_replace('&amp;', '%26', $data);
-        $data = str_replace('&', '%26', $data);
-		
 		$this->getConnection()->setParameterGet('value', $data);
 		
 		$response = $this->getConnection()->request();
